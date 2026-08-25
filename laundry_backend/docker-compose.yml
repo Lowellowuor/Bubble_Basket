@@ -1,0 +1,39 @@
+version: '3.8'
+
+services:
+  db:
+    image: postgres:15-alpine
+    container_name: laundry_db
+    environment:
+      POSTGRES_DB: laundry_db
+      POSTGRES_USER: laundry_user
+      POSTGRES_PASSWORD: securepassword123
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+
+  redis:
+    image: redis:7-alpine
+    container_name: laundry_redis
+    ports:
+      - "6379:6379"
+
+  web:
+    build: .
+    container_name: laundry_backend
+    command: python manage.py runserver 0.0.0.0:8000
+    volumes:
+      - .:/app
+    ports:
+      - "8000:8000"
+    depends_on:
+      - db
+      - redis
+    environment:
+      - DJANGO_SETTINGS_MODULE=core.settings
+    env_file:
+      - .env
+
+volumes:
+  postgres_data:

@@ -1,0 +1,143 @@
+﻿# ============================================================
+# Python (Django Backend)
+# ============================================================
+
+# Byte-compiled / optimized / DLL files
+__pycache__/
+*.py[cod]
+*$py.class
+
+# Virtual environments
+venv/
+env/
+ENV/
+.venv
+
+# Database
+db.sqlite3
+*.sqlite3
+
+# Environment variables
+.env
+.env.local
+.env.*.local
+
+# Django migrations (except __init__.py)
+*/migrations/*.py
+!*/migrations/__init__.py
+
+# Django media / static files
+media/
+staticfiles/
+static/
+
+# Logs
+*.log
+
+# Coverage reports
+htmlcov/
+.tox/
+.coverage
+.coverage.*
+.cache
+nosetests.xml
+coverage.xml
+*.cover
+*.py,cover
+.hypothesis/
+.pytest_cache/
+
+# PyPI / packaging
+*.egg-info/
+dist/
+build/
+*.egg
+
+# Jupyter Notebooks
+.ipynb_checkpoints/
+
+# Celery
+celerybeat-schedule
+celerybeat.pid
+
+# Dotenv
+.env
+
+# Sphinx docs
+docs/_build/
+
+# Pyre type checker
+.pyre/
+
+# mypy
+.mypy_cache/
+.dmypy.json
+dmypy.json
+
+# Pycharm
+.idea/
+*.iml
+
+# VSCode
+.vscode/
+*.code-workspace
+
+# ============================================================
+# Node / React (Frontend)
+# ============================================================
+
+# Node modules
+node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+.pnpm-debug.log*
+
+# Build output
+dist/
+build/
+*.tsbuildinfo
+
+# Environment variables
+.env
+.env.local
+.env.production
+.env.development
+
+# Vite cache
+.vite/
+.cache/
+
+# OS files
+.DS_Store
+Thumbs.db
+Desktop.ini
+
+# ============================================================
+# Misc / General
+# ============================================================
+
+# Swap files
+*.swp
+*.swo
+*~
+
+# Archive / backup files
+*.zip
+*.tar.gz
+*.bak
+
+# Docker
+.dockerignore
+docker-compose.override.yml
+
+# Terraform / AWS (if you have infrastructure as code)
+*.tfstate
+*.tfstate.*
+.terraform/
+
+# Sensitive files
+*.pem
+*.key
+*.crt
+*.cert
