@@ -1,11 +1,11 @@
-# 🧺 Bubble Basket Laundry – On-Demand Laundry Management System
+#  Bubble Basket Laundry – On-Demand Laundry Management System
 
 A modern, full‑stack laundry management platform built for university communities.  
 Digitises ordering, payments, and operations – replacing WhatsApp chaos with a structured, real‑time system.
 
 ---
 
-## 📦 Project Overview
+##  Project Overview
 
 Bubble Basket Laundry is a complete business management suite with a customer‑facing mobile‑ready web app, staff Kanban board, rider delivery interface, and admin dashboard with full analytics.
 
@@ -20,7 +20,7 @@ Bubble Basket Laundry is a complete business management suite with a customer‑
 
 ---
 
-## 🛠 Technology Stack
+## Technology Stack
 
 ### Backend (Python)
 - **Django 4.2** + Django REST Framework
@@ -44,7 +44,7 @@ Bubble Basket Laundry is a complete business management suite with a customer‑
 
 ---
 
-## 🎨 Brand Theme
+##  Brand Theme
 
 A playful, modern identity built around:
 - **Primary:** Bubble Pink `#FF1E75`
@@ -58,7 +58,7 @@ Typography: **Fredoka One** (headings) + **Poppins** (body).
 
 ---
 
-## 🚀 Getting Started
+##  Getting Started
 
 ### Prerequisites
 - Python 3.11+
@@ -134,7 +134,7 @@ bash
 npm run dev
 App runs at http://localhost:3000.
 
-🔐 Default Test Accounts
+ Default Test Accounts
 Role	Phone Number
 Admin	254700000001
 Shop Staff	254700000002
@@ -142,7 +142,7 @@ Rider	254700000003
 Client	254712345678
 OTP is printed in the backend terminal (SMS disabled in development).
 
-📁 Project Structure
+ Project Structure
 text
 bubble-basket-laundry/
 ├── laundry_backend/          # Django backend
@@ -169,14 +169,14 @@ bubble-basket-laundry/
     │   └── App.jsx
     ├── package.json
     └── tailwind.config.js
-🧪 Testing
+ Testing
 Backend Tests (Coming Soon)
 bash
 pytest
 Frontend Tests (Coming Soon)
 bash
 npm run test
-🚢 Deployment
+ Deployment
 Backend (AWS / Any VPS)
 Use Gunicorn + Uvicorn (ASGI for WebSockets)
 
@@ -193,7 +193,7 @@ bash
 npm run build
 Serve the dist folder.
 
-🤝 Contributing
+ Contributing
 Fork the repository.
 
 Create a feature branch (git checkout -b feature/amazing-feature).
@@ -204,15 +204,15 @@ Push to the branch (git push origin feature/amazing-feature).
 
 Open a Pull Request.
 
-📄 License
+ License
 This project is proprietary and confidential. All rights reserved.
 
-📞 Contact
-Bubble Basket Laundry – 0793 272 588
+ Contact
+Bubble Basket Laundry – 0
 
 Location – Daystar, Athi River
 
-🙏 Acknowledgements
+ Acknowledgements
 Django & React communities
 
 Twilio for SMS
