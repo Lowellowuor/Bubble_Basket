@@ -9,7 +9,7 @@ from .models import Order
 from .serializers import OrderSerializer, ApplyPromoSerializer, ApplyReferralSerializer, AssignRiderSerializer
 from .permissions import IsClient, IsShopStaff, IsRider, IsAssignedRider
 from apps.admin_tools.models import PromoCode, Referral
-from apps.users.models import User
+from apps.users.models import User, ClientProfile
 
 class OrderCreateView(ListCreateAPIView):
     serializer_class = OrderSerializer
@@ -101,14 +101,32 @@ class ApplyReferralView(CreateAPIView):
         code = request.data.get('referral_code')
         referrer = User.objects.filter(client_profile__referral_code=code).first()
         if not referrer or referrer == request.user:
-            return Response({'error': 'Invalid code'}, status=400)
+            return Response({'error': 'Invalid referral code'}, status=400)
         existing = Referral.objects.filter(referrer=referrer, referee=request.user).first()
         if existing:
-            return Response({'error': 'Already referred'}, status=400)
+            return Response({'error': 'Already referred by this user'}, status=400)
         Referral.objects.create(referrer=referrer, referee=request.user, order=order)
-        order.total_price = max(0, order.total_price - 100)
+        return Response({'message': 'Referral applied! You and your friend will earn points.'})
+
+class ApplyPointsView(APIView):
+    permission_classes = [IsAuthenticated, IsClient]
+    def post(self, request, order_id):
+        order = get_object_or_404(Order, id=order_id, student=request.user)
+        profile = request.user.client_profile
+        if profile.points < 100:
+            return Response({'error': 'You need at least 100 points to redeem a discount'}, status=400)
+        profile.points -= 100
+        profile.save()
+        discount = order.total_price * 0.10
+        order.total_price = max(0, order.total_price - discount)
+        order.points_used = 100
+        order.discount_from_points = discount
         order.save()
-        return Response({'discount_applied': 100, 'new_total': float(order.total_price)})
+        return Response({
+            'message': f'100 points redeemed for 10% discount (KES {discount:.2f})',
+            'new_total': float(order.total_price),
+            'points_remaining': profile.points
+        })
 
 class CancelOrderView(APIView):
     permission_classes = [IsAuthenticated, IsClient]

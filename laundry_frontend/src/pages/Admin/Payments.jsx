@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react'
-import { useNavigate } from 'react-router-dom'
+import { useNavigate, useLocation } from 'react-router-dom'
 import api from '../../api/client'
 import { 
   ArrowLeft, 
@@ -14,12 +14,23 @@ import {
 
 export function AdminPayments() {
   const navigate = useNavigate()
+  const location = useLocation()
   const [orders, setOrders] = useState([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState(null)
-  const [filterStatus, setFilterStatus] = useState('all')
   const [searchTerm, setSearchTerm] = useState('')
   const [dateRange, setDateRange] = useState({ start: '', end: '' })
+
+  // Get status from URL query parameter
+  const queryParams = new URLSearchParams(location.search)
+  const initialStatus = queryParams.get('status') || 'all'
+  const [filterStatus, setFilterStatus] = useState(initialStatus)
+
+  // Update filterStatus when URL changes
+  useEffect(() => {
+    const status = new URLSearchParams(location.search).get('status') || 'all'
+    setFilterStatus(status)
+  }, [location.search])
 
   useEffect(() => {
     fetchPayments()
@@ -30,10 +41,9 @@ export function AdminPayments() {
     setError(null)
     try {
       const { data } = await api.get('/orders/')
-      console.log('📊 Payments data:', data) // Debug: see what's returned
       setOrders(Array.isArray(data) ? data : [])
-    } catch (error) {
-      console.error('❌ Error fetching payments:', error)
+    } catch (err) {
+      console.error('Error fetching payments:', err)
       setError('Failed to load payments. Please try again.')
       setOrders([])
     } finally {
@@ -63,7 +73,7 @@ export function AdminPayments() {
   if (loading) {
     return (
       <div className="flex items-center justify-center min-h-[60vh]">
-        <div className="animate-pulse text-brand-green">Loading payments...</div>
+        <div className="animate-pulse text-brand-pink font-heading">Loading payments...</div>
       </div>
     )
   }
@@ -81,7 +91,7 @@ export function AdminPayments() {
 
   return (
     <div className="animate-fadeIn max-w-6xl mx-auto">
-      <button onClick={() => navigate('/admin')} className="flex items-center gap-2 text-text-secondary hover:text-brand-green transition-colors mb-4">
+      <button onClick={() => navigate('/admin')} className="flex items-center gap-2 text-text-secondary hover:text-brand-pink transition-colors mb-4">
         <ArrowLeft size={20} />
         Back to Dashboard
       </button>
@@ -104,7 +114,7 @@ export function AdminPayments() {
           </div>
           <div>
             <p className="text-sm text-text-secondary">Paid</p>
-            <p className="text-xl font-brand text-green-600">KES {totalRevenue.toFixed(2)}</p>
+            <p className="text-xl font-heading text-green-600">KES {totalRevenue.toFixed(2)}</p>
           </div>
         </div>
         <div className="card flex items-center gap-3">
@@ -113,7 +123,7 @@ export function AdminPayments() {
           </div>
           <div>
             <p className="text-sm text-text-secondary">Pending</p>
-            <p className="text-xl font-brand text-yellow-600">KES {totalPending.toFixed(2)}</p>
+            <p className="text-xl font-heading text-yellow-600">KES {totalPending.toFixed(2)}</p>
           </div>
         </div>
         <div className="card flex items-center gap-3">
@@ -122,7 +132,7 @@ export function AdminPayments() {
           </div>
           <div>
             <p className="text-sm text-text-secondary">Failed</p>
-            <p className="text-xl font-brand text-red-600">KES {totalFailed.toFixed(2)}</p>
+            <p className="text-xl font-heading text-red-600">KES {totalFailed.toFixed(2)}</p>
           </div>
         </div>
       </div>
@@ -147,7 +157,13 @@ export function AdminPayments() {
             <label className="block text-xs text-text-secondary mb-1">Status</label>
             <select
               value={filterStatus}
-              onChange={(e) => setFilterStatus(e.target.value)}
+              onChange={(e) => {
+                setFilterStatus(e.target.value)
+                // Update URL query parameter
+                const params = new URLSearchParams(location.search)
+                params.set('status', e.target.value)
+                navigate({ search: params.toString() }, { replace: true })
+              }}
               className="input-field"
             >
               <option value="all">All</option>
@@ -176,7 +192,14 @@ export function AdminPayments() {
           </div>
           <div className="flex items-end">
             <button
-              onClick={() => { setFilterStatus('all'); setSearchTerm(''); setDateRange({ start: '', end: '' }); }}
+              onClick={() => {
+                setFilterStatus('all')
+                setSearchTerm('')
+                setDateRange({ start: '', end: '' })
+                const params = new URLSearchParams(location.search)
+                params.delete('status')
+                navigate({ search: params.toString() }, { replace: true })
+              }}
               className="btn-outline rounded-full px-4 py-2 text-sm"
             >
               <Filter size={16} className="inline mr-1" /> Clear
@@ -202,7 +225,7 @@ export function AdminPayments() {
             {filteredOrders.length > 0 ? (
               filteredOrders.map((order) => (
                 <tr key={order.id} className="border-b border-gray-100 hover:bg-gray-50">
-                  <td className="py-2 font-brand text-brand-green font-semibold">
+                  <td className="py-2 font-brand text-brand-indigo font-semibold">
                     {order.order_number}
                   </td>
                   <td>{order.student?.phone_number || 'N/A'}</td>
@@ -217,7 +240,9 @@ export function AdminPayments() {
                       {order.payment_status}
                     </span>
                   </td>
-                  <td>{order.mpesa_receipt || '-'}</td>
+                  <td className={order.mpesa_receipt ? 'text-mpesa-magenta font-medium' : 'text-text-light'}>
+                    {order.mpesa_receipt || '-'}
+                  </td>
                   <td className="text-text-light">
                     {new Date(order.created_at).toLocaleDateString()}
                   </td>

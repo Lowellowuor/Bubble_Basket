@@ -1,6 +1,6 @@
 ﻿from django.db import models
 from django.contrib.auth.models import AbstractBaseUser, BaseUserManager, PermissionsMixin
-import secrets
+import random
 
 class UserManager(BaseUserManager):
     def create_user(self, phone_number, password=None, **extra_fields):
@@ -42,12 +42,15 @@ class User(AbstractBaseUser, PermissionsMixin):
     @property
     def is_client(self):
         return self.role == 'client'
+
     @property
     def is_shop_staff(self):
         return self.role == 'shop_staff'
+
     @property
     def is_rider(self):
         return self.role == 'rider'
+
     @property
     def is_admin_role(self):
         return self.role == 'admin'
@@ -59,11 +62,21 @@ class ClientProfile(models.Model):
     prefers_fabric_softener = models.BooleanField(default=True)
     prefers_scent_free = models.BooleanField(default=False)
     prefers_color_separation = models.BooleanField(default=False)
-    referral_code = models.CharField(max_length=10, unique=True, blank=True)
+    referral_code = models.CharField(max_length=20, unique=True, blank=True)
+    points = models.PositiveIntegerField(default=0)
 
     def save(self, *args, **kwargs):
         if not self.referral_code:
-            self.referral_code = secrets.token_hex(3).upper()
+            name_part = self.user.name.strip() if self.user.name else self.user.phone_number[-4:]
+            name_part = ''.join(c for c in name_part if c.isalnum())
+            if not name_part:
+                name_part = 'USER'
+            suffix = str(random.randint(1000, 9999))
+            base_code = f"{name_part}{suffix}"
+            while ClientProfile.objects.filter(referral_code=base_code).exists():
+                suffix = str(random.randint(1000, 9999))
+                base_code = f"{name_part}{suffix}"
+            self.referral_code = base_code
         super().save(*args, **kwargs)
 
 class StaffProfile(models.Model):

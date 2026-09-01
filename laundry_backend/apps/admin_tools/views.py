@@ -21,7 +21,6 @@ from .serializers import (
 )
 from .permissions import IsAdmin
 
-# Admin CRUD
 class InventoryViewSet(viewsets.ModelViewSet):
     queryset = InventoryItem.objects.all()
     serializer_class = InventoryItemSerializer
@@ -52,7 +51,6 @@ class ReferralViewSet(viewsets.ModelViewSet):
     serializer_class = ReferralSerializer
     permission_classes = [IsAuthenticated, IsAdmin]
 
-# New Pricing & Branding Admin
 class PricingCategoryViewSet(viewsets.ModelViewSet):
     queryset = PricingCategory.objects.all()
     serializer_class = PricingCategorySerializer
@@ -71,7 +69,6 @@ class BrandingViewSet(viewsets.ModelViewSet):
     def get_queryset(self):
         return Branding.objects.filter(id=1)
 
-# Public endpoints (no auth)
 class PublicPricingListView(generics.ListAPIView):
     permission_classes = []
     authentication_classes = []
@@ -86,15 +83,17 @@ class PublicBrandingView(generics.RetrieveAPIView):
     def get_object(self):
         return Branding.objects.get_instance()
 
-# Analytics
 class AnalyticsRevenueView(APIView):
     permission_classes = [IsAuthenticated, IsAdmin]
     def get(self, request):
         period = request.query_params.get('period', 'day')
         now = timezone.now()
-        if period == 'week': start = now - timedelta(days=7)
-        elif period == 'month': start = now - timedelta(days=30)
-        else: start = now - timedelta(days=1)
+        if period == 'week':
+            start = now - timedelta(days=7)
+        elif period == 'month':
+            start = now - timedelta(days=30)
+        else:
+            start = now - timedelta(days=1)
         orders = Order.objects.filter(created_at__gte=start, payment_status='paid')
         total = orders.aggregate(total=Sum('total_price'))['total'] or 0
         cash = orders.filter(mpesa_receipt__isnull=True).aggregate(total=Sum('total_price'))['total'] or 0
@@ -150,7 +149,6 @@ class BroadcastMessageView(APIView):
             print(f"Send to {user.phone_number}: {message}")
         return Response({'message': f'Broadcast sent to {users.count()} users'})
 
-# Client endpoints
 class GenerateReferralCodeView(APIView):
     permission_classes = [IsAuthenticated]
     def get(self, request):
@@ -166,9 +164,12 @@ class MyReferralsView(APIView):
 class MyLoyaltyView(APIView):
     permission_classes = [IsAuthenticated]
     def get(self, request):
+        profile = request.user.client_profile
         stamps = LoyaltyStamp.objects.filter(user=request.user).count()
         reward = LoyaltyReward.objects.filter(is_active=True).first()
         return Response({
+            'points': profile.points,
+            'referral_code': profile.referral_code,
             'stamps': stamps,
             'stamps_required': reward.stamps_required if reward else 5,
             'reward_available': stamps >= (reward.stamps_required if reward else 5)
@@ -192,7 +193,11 @@ class RedeemLoyaltyView(APIView):
             pickup_location=request.user.client_profile.hostel,
             delivery_location=request.user.client_profile.hostel,
         )
-        return Response({'message': 'Reward redeemed', 'free_order_id': order.id, 'order_number': order.order_number})
+        return Response({
+            'message': 'Reward redeemed',
+            'free_order_id': order.id,
+            'order_number': order.order_number
+        })
 
 class AvailablePlansView(APIView):
     permission_classes = [IsAuthenticated]

@@ -13,7 +13,9 @@ import {
   MessageSquare,
   CreditCard,
   Smartphone,
-  Sparkles
+  Sparkles,
+  Home,
+  Store
 } from 'lucide-react'
 
 export function NewOrder() {
@@ -25,17 +27,13 @@ export function NewOrder() {
     weight_kg: '',
     duvet_size: '',
     special_item: '',
-    pickup_location: 'Bethel Hostel',
-    delivery_location: 'Bethel Hostel',
+    pickup_location: '',
+    pickup_landmark: '',
+    delivery_type: 'shop',
+    delivery_location: '',
     special_instructions: '',
     items: []
   })
-  const [locations] = useState([
-    'Bethel Hostel',
-    'Grace Hostel',
-    'Lukenya Courts',
-    'Other'
-  ])
   const [duvetSizes] = useState([
     { label: 'Small (4×6)', value: 'small', price: 350 },
     { label: 'Medium (5×6)', value: 'medium', price: 400 },
@@ -50,10 +48,25 @@ export function NewOrder() {
   ])
 
   const [totalPrice, setTotalPrice] = useState(0)
+  const [profile, setProfile] = useState(null)
+  const [usePoints, setUsePoints] = useState(false)
+
+  useEffect(() => {
+    fetchProfile()
+  }, [])
 
   useEffect(() => {
     calculatePrice()
   }, [order])
+
+  const fetchProfile = async () => {
+    try {
+      const { data } = await api.get('/admin/loyalty/my-stamps/')
+      setProfile(data)
+    } catch (error) {
+      console.error('Error fetching profile:', error)
+    }
+  }
 
   const calculatePrice = () => {
     let price = 0
@@ -79,6 +92,7 @@ export function NewOrder() {
 
   const handleSubmit = async () => {
     setLoading(true)
+    let createdOrderId = null
     try {
       let items = []
       if (order.service_type === 'regular') {
@@ -106,20 +120,34 @@ export function NewOrder() {
         })
       }
 
+      const deliveryLocation = order.delivery_type === 'shop' 
+        ? 'Bubble Basket Laundry, Daystar, Athi River' 
+        : order.delivery_location
+
       const payload = {
-        pickup_location: order.pickup_location,
-        delivery_location: order.delivery_location,
+        pickup_location: order.pickup_location + (order.pickup_landmark ? ` (Near: ${order.pickup_landmark})` : ''),
+        delivery_location: deliveryLocation,
         special_instructions: order.special_instructions,
         items: items
       }
 
       const { data } = await api.post('/orders/create/', payload)
-      
-      if (totalPrice > 0) {
-        await api.post(`/payments/initiate/${data.id}/`)
+      createdOrderId = data.id
+
+      if (usePoints && profile?.points >= 100) {
+        try {
+          const pointsRes = await api.post(`/orders/${createdOrderId}/apply-points/`)
+          alert(`✅ ${pointsRes.data.message}`)
+        } catch (err) {
+          alert(err.response?.data?.error || 'Failed to apply points discount')
+        }
       }
-      
-      navigate(`/client/orders/${data.id}`)
+
+      if (totalPrice > 0) {
+        await api.post(`/payments/initiate/${createdOrderId}/`)
+      }
+
+      navigate(`/client/orders/${createdOrderId}`)
     } catch (error) {
       alert('Failed to create order. Please try again.')
     } finally {
@@ -234,40 +262,89 @@ export function NewOrder() {
 
   const renderStep2 = () => (
     <div className="space-y-4">
-      <h3 className="font-heading text-xl text-brand-indigo">Where should we pick up and deliver?</h3>
+      <h3 className="font-heading text-xl text-brand-indigo">Pickup & Delivery</h3>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-        <div>
+      <div className="card">
+        <label className="block text-sm font-medium text-text-secondary mb-1">
+          <MapPin size={16} className="inline mr-1 text-brand-pink" />
+          Pickup Address
+        </label>
+        <input
+          type="text"
+          placeholder="Your address (e.g., Bethel Hostel, Room 203)"
+          value={order.pickup_location}
+          onChange={(e) => setOrder({ ...order, pickup_location: e.target.value })}
+          className="input-field"
+          required
+        />
+        <div className="mt-3">
           <label className="block text-sm font-medium text-text-secondary mb-1">
-            <MapPin size={16} className="inline mr-1 text-brand-pink" />
-            Pickup Location
+            Nearby Landmark <span className="text-text-light text-xs">(optional)</span>
           </label>
-          <select
-            value={order.pickup_location}
-            onChange={(e) => setOrder({ ...order, pickup_location: e.target.value })}
+          <input
+            type="text"
+            placeholder="e.g., near the cafeteria, next to the library"
+            value={order.pickup_landmark}
+            onChange={(e) => setOrder({ ...order, pickup_landmark: e.target.value })}
             className="input-field"
+          />
+        </div>
+      </div>
+
+      <div className="card">
+        <label className="block text-sm font-medium text-text-secondary mb-2">
+          Delivery Option
+        </label>
+        <div className="space-y-2">
+          <button
+            onClick={() => setOrder({ ...order, delivery_type: 'shop' })}
+            className={`w-full flex items-center gap-3 p-3 rounded-xl border transition-all ${
+              order.delivery_type === 'shop'
+                ? 'border-brand-pink bg-brand-pink/5 ring-2 ring-brand-pink'
+                : 'border-gray-200 hover:border-brand-pink/30'
+            }`}
           >
-            {locations.map((loc) => (
-              <option key={loc} value={loc}>{loc}</option>
-            ))}
-          </select>
+            <div className={`p-2 rounded-full ${order.delivery_type === 'shop' ? 'bg-brand-pink' : 'bg-gray-100'}`}>
+              <Store size={18} className={order.delivery_type === 'shop' ? 'text-white' : 'text-gray-400'} />
+            </div>
+            <div className="text-left">
+              <p className="font-medium text-brand-indigo">Pick up from Bubble Basket Laundry</p>
+              <p className="text-xs text-text-light">Daystar, Athi River</p>
+            </div>
+          </button>
+
+          <button
+            onClick={() => setOrder({ ...order, delivery_type: 'custom' })}
+            className={`w-full flex items-center gap-3 p-3 rounded-xl border transition-all ${
+              order.delivery_type === 'custom'
+                ? 'border-brand-pink bg-brand-pink/5 ring-2 ring-brand-pink'
+                : 'border-gray-200 hover:border-brand-pink/30'
+            }`}
+          >
+            <div className={`p-2 rounded-full ${order.delivery_type === 'custom' ? 'bg-brand-pink' : 'bg-gray-100'}`}>
+              <Home size={18} className={order.delivery_type === 'custom' ? 'text-white' : 'text-gray-400'} />
+            </div>
+            <div className="text-left">
+              <p className="font-medium text-brand-indigo">Deliver to a different address</p>
+              <p className="text-xs text-text-light">Enter custom delivery address</p>
+            </div>
+          </button>
         </div>
 
-        <div>
-          <label className="block text-sm font-medium text-text-secondary mb-1">
-            <MapPin size={16} className="inline mr-1 text-brand-pink" />
-            Delivery Location
-          </label>
-          <select
-            value={order.delivery_location}
-            onChange={(e) => setOrder({ ...order, delivery_location: e.target.value })}
-            className="input-field"
-          >
-            {locations.map((loc) => (
-              <option key={loc} value={loc}>{loc}</option>
-            ))}
-          </select>
-        </div>
+        {order.delivery_type === 'custom' && (
+          <div className="mt-3">
+            <label className="block text-sm font-medium text-text-secondary mb-1">
+              Delivery Address
+            </label>
+            <input
+              type="text"
+              placeholder="Enter delivery address"
+              value={order.delivery_location}
+              onChange={(e) => setOrder({ ...order, delivery_location: e.target.value })}
+              className="input-field"
+            />
+          </div>
+        )}
       </div>
 
       <div className="card">
@@ -285,73 +362,108 @@ export function NewOrder() {
     </div>
   )
 
-  const renderStep3 = () => (
-    <div className="space-y-4">
-      <h3 className="font-heading text-xl text-brand-indigo">Review & Pay</h3>
+  const renderStep3 = () => {
+    const points = profile?.points || 0
+    const canRedeem = points >= 100
+    const discountedPrice = usePoints ? totalPrice * 0.9 : totalPrice
 
-      <div className="card space-y-3">
-        <div className="flex justify-between py-2 border-b border-brand-indigo/5">
-          <span className="text-text-secondary">Service</span>
-          <span className="font-medium text-brand-indigo">
-            {order.service_type === 'regular' && 'Clothes (per kg)'}
-            {order.service_type === 'duvet' && 'Duvet'}
-            {order.service_type === 'special' && 'Special Item'}
-          </span>
-        </div>
-        {order.service_type === 'regular' && order.weight_kg && (
+    return (
+      <div className="space-y-4">
+        <h3 className="font-heading text-xl text-brand-indigo">Review & Pay</h3>
+
+        <div className="card space-y-3">
           <div className="flex justify-between py-2 border-b border-brand-indigo/5">
-            <span className="text-text-secondary">Weight</span>
-            <span className="font-medium text-brand-indigo">{order.weight_kg} kg</span>
-          </div>
-        )}
-        {order.service_type === 'duvet' && order.duvet_size && (
-          <div className="flex justify-between py-2 border-b border-brand-indigo/5">
-            <span className="text-text-secondary">Duvet Size</span>
+            <span className="text-text-secondary">Service</span>
             <span className="font-medium text-brand-indigo">
-              {duvetSizes.find(d => d.value === order.duvet_size)?.label || ''}
+              {order.service_type === 'regular' && 'Clothes (per kg)'}
+              {order.service_type === 'duvet' && 'Duvet'}
+              {order.service_type === 'special' && 'Special Item'}
             </span>
           </div>
-        )}
-        {order.service_type === 'special' && order.special_item && (
+          {order.service_type === 'regular' && order.weight_kg && (
+            <div className="flex justify-between py-2 border-b border-brand-indigo/5">
+              <span className="text-text-secondary">Weight</span>
+              <span className="font-medium text-brand-indigo">{order.weight_kg} kg</span>
+            </div>
+          )}
+          {order.service_type === 'duvet' && order.duvet_size && (
+            <div className="flex justify-between py-2 border-b border-brand-indigo/5">
+              <span className="text-text-secondary">Duvet Size</span>
+              <span className="font-medium text-brand-indigo">
+                {duvetSizes.find(d => d.value === order.duvet_size)?.label || ''}
+              </span>
+            </div>
+          )}
+          {order.service_type === 'special' && order.special_item && (
+            <div className="flex justify-between py-2 border-b border-brand-indigo/5">
+              <span className="text-text-secondary">Item</span>
+              <span className="font-medium text-brand-indigo">
+                {specialItems.find(s => s.value === order.special_item)?.label || ''}
+              </span>
+            </div>
+          )}
           <div className="flex justify-between py-2 border-b border-brand-indigo/5">
-            <span className="text-text-secondary">Item</span>
+            <span className="text-text-secondary">Pickup</span>
+            <span className="font-medium text-brand-indigo">{order.pickup_location}{order.pickup_landmark ? ` (Near: ${order.pickup_landmark})` : ''}</span>
+          </div>
+          <div className="flex justify-between py-2 border-b border-brand-indigo/5">
+            <span className="text-text-secondary">Delivery</span>
             <span className="font-medium text-brand-indigo">
-              {specialItems.find(s => s.value === order.special_item)?.label || ''}
+              {order.delivery_type === 'shop' 
+                ? 'Bubble Basket Laundry (shop)' 
+                : order.delivery_location || 'To be specified'}
             </span>
           </div>
-        )}
-        <div className="flex justify-between py-2 border-b border-brand-indigo/5">
-          <span className="text-text-secondary">Pickup</span>
-          <span className="font-medium text-brand-indigo">{order.pickup_location}</span>
-        </div>
-        <div className="flex justify-between py-2 border-b border-brand-indigo/5">
-          <span className="text-text-secondary">Delivery</span>
-          <span className="font-medium text-brand-indigo">{order.delivery_location}</span>
-        </div>
-        <div className="flex justify-between py-3">
-          <span className="text-lg font-heading text-brand-indigo">Total</span>
-          <span className="text-2xl font-heading text-brand-pink">KES {totalPrice}</span>
-        </div>
-      </div>
 
-      {/* M-PESA Payment Card - Branded */}
-      <div className="card bg-[#FFF5F5] border-2 border-mpesa-magenta/20">
-        <div className="flex items-center gap-3">
-          <div className="p-3 bg-mpesa-magenta/10 rounded-2xl">
-            <Smartphone size={28} className="text-mpesa-magenta" />
+          {usePoints && canRedeem && (
+            <div className="flex justify-between py-2 border-b border-brand-pink/20 bg-brand-pink/5 px-2 rounded">
+              <span className="text-sm text-brand-pink font-semibold">Discount (10%)</span>
+              <span className="text-sm text-brand-pink">- KES {(totalPrice * 0.1).toFixed(2)}</span>
+            </div>
+          )}
+
+          <div className="flex justify-between py-3">
+            <span className="text-lg font-heading text-brand-indigo">Total</span>
+            <span className="text-2xl font-heading text-brand-pink">KES {discountedPrice.toFixed(2)}</span>
           </div>
-          <div>
-            <p className="font-semibold text-brand-indigo">Lipa Na M-PESA</p>
-            <p className="text-sm text-text-secondary">You'll receive an STK push on your phone</p>
-            <p className="text-xs text-text-light mt-1">
-              Paybill: <strong className="text-mpesa-magenta">303030</strong> · 
-              Account: <strong className="text-mpesa-magenta">2051303388</strong>
-            </p>
+        </div>
+
+        {canRedeem && (
+          <div className="card bg-brand-lavender border border-brand-pink/20">
+            <div className="flex items-center gap-3">
+              <input
+                type="checkbox"
+                id="usePoints"
+                checked={usePoints}
+                onChange={(e) => setUsePoints(e.target.checked)}
+                className="w-5 h-5 text-brand-pink rounded border-gray-300 focus:ring-brand-pink"
+              />
+              <label htmlFor="usePoints" className="text-sm text-text-secondary">
+                Use <strong className="text-brand-pink">100 points</strong> for <strong className="text-brand-pink">10% discount</strong> (you have {points} points)
+              </label>
+            </div>
+            <p className="text-xs text-text-light mt-1 ml-8">Points never expire – use them anytime!</p>
+          </div>
+        )}
+
+        <div className="card bg-[#FFF5F5] border-2 border-mpesa-magenta/20">
+          <div className="flex items-center gap-3">
+            <div className="p-3 bg-mpesa-magenta/10 rounded-2xl">
+              <Smartphone size={28} className="text-mpesa-magenta" />
+            </div>
+            <div>
+              <p className="font-semibold text-brand-indigo">Lipa Na M-PESA</p>
+              <p className="text-sm text-text-secondary">You'll receive an STK push on your phone</p>
+              <p className="text-xs text-text-light mt-1">
+                Paybill: <strong className="text-mpesa-magenta">303030</strong> · 
+                Account: <strong className="text-mpesa-magenta">2051303388</strong>
+              </p>
+            </div>
           </div>
         </div>
       </div>
-    </div>
-  )
+    )
+  }
 
   return (
     <div className="animate-fadeIn max-w-3xl mx-auto">
@@ -366,7 +478,6 @@ export function NewOrder() {
         <Sparkles size={20} className="text-brand-pink ml-auto" />
       </div>
 
-      {/* Step Indicators */}
       <div className="flex items-center gap-2 mb-6">
         {[1, 2, 3].map((s) => (
           <div key={s} className="flex items-center">
@@ -382,14 +493,12 @@ export function NewOrder() {
         ))}
       </div>
 
-      {/* Step Content */}
       <div className="mb-6">
         {step === 1 && renderStep1()}
         {step === 2 && renderStep2()}
         {step === 3 && renderStep3()}
       </div>
 
-      {/* Navigation Buttons */}
       <div className="flex gap-3">
         {step > 1 && (
           <button onClick={handleBack} className="btn-outline flex-1 rounded-full">

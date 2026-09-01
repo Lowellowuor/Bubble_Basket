@@ -11,3 +11,8 @@ class UserProfileSerializer(serializers.ModelSerializer):
     class Meta:
         model = User
         fields = ['id', 'phone_number', 'name', 'role', 'date_joined', 'client_profile']
+
+class UserSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = User
+        fields = ['id', 'phone_number', 'name', 'role', 'date_joined']

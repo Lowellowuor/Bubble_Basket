@@ -36,6 +36,10 @@ class Order(models.Model):
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 
+    points_used = models.PositiveIntegerField(default=0)
+    discount_from_points = models.DecimalField(max_digits=10, decimal_places=2, default=0.00)
+    points_awarded = models.BooleanField(default=False)
+
     def save(self, *args, **kwargs):
         if not self.order_number:
             today = timezone.now().strftime('%y%m%d')

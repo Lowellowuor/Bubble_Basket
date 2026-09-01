@@ -2,6 +2,7 @@ from django.db.models.signals import post_save
 from django.dispatch import receiver
 from .models import Order
 from apps.admin_tools.models import LoyaltyStamp, Referral, LoyaltyReward
+from apps.users.models import ClientProfile
 
 @receiver(post_save, sender=Order)
 def handle_order_completion(sender, instance, created, **kwargs):
@@ -15,9 +16,15 @@ def handle_order_completion(sender, instance, created, **kwargs):
             if stamps_count >= reward.stamps_required:
                 LoyaltyStamp.objects.filter(user=instance.student).order_by('created_at')[:reward.stamps_required].delete()
 
-        referrals = Referral.objects.filter(referee=instance.student, reward_issued=False)
-        for referral in referrals:
-            if not referral.order:
-                referral.order = instance
-                referral.reward_issued = True
-                referral.save()
+        if not instance.points_awarded:
+            referrals = Referral.objects.filter(referee=instance.student, reward_issued=False)
+            for referral in referrals:
+                if not referral.order:
+                    referral.order = instance
+                    referral.reward_issued = True
+                    referral.save()
+                    referrer_profile = ClientProfile.objects.get(user=referral.referrer)
+                    referrer_profile.points += 100
+                    referrer_profile.save()
+                    instance.points_awarded = True
+                    instance.save()
